@@ -352,10 +352,12 @@ static int spi_nand_cmd_read_from_cache(uint32_t offset, uint8_t *buffer, uint32
 	return spi_nand_transaction(&cmd_def_read_from_cache_x, offset, buffer, buffer_size);
 }
 
+#if 0
 static int spi_nand_cmd_read_from_cache_1(uint32_t offset, uint8_t *buffer, uint32_t buffer_size)
 {
 	return spi_nand_transaction(&cmd_def_read_from_cache_1, offset, buffer, buffer_size);
 }
+#endif
 
 int spi_nand_cmd_write_enable(int enable)
 {
@@ -460,7 +462,7 @@ static int spi_nand_wait_not_busy(const char *label, uint8_t *statusptr)
 int spi_nand_reset(void)
 {
 	int ret = spi_nand_cmd_reset();
-	spi_nand_wait_not_busy("reset" , NULL);
+	spi_nand_wait_not_busy(NULL /*"reset"*/ , NULL);
 	return ret;
 }
 
@@ -546,7 +548,7 @@ int spi_nand_read_page(uint32_t page,
 
 	gpio_debug1(1);
 
-	ret = spi_nand_wait_not_busy("reading" , &status);
+	ret = spi_nand_wait_not_busy(NULL /*"reading"*/, &status);
 	gpio_debug1(0);
 	gpio_debug2(1);
 	for(i = 0; i < n_ops; i++) {
@@ -561,6 +563,7 @@ int spi_nand_read_page(uint32_t page,
 	return ret;
 }
 
+#if 0
 int spi_nand_read_page_1(uint32_t page,
 					   struct spi_nand_buffer_op *ops,
 					   uint32_t n_ops,
@@ -576,7 +579,7 @@ int spi_nand_read_page_1(uint32_t page,
 
 	gpio_debug1(1);
 
-	ret = spi_nand_wait_not_busy("reading" , &status);
+	ret = spi_nand_wait_not_busy(NULL /*"reading"*/ , &status);
 	gpio_debug1(0);
 	gpio_debug2(1);
 	for(i = 0; i < n_ops; i++) {
@@ -590,6 +593,7 @@ int spi_nand_read_page_1(uint32_t page,
 
 	return ret;
 }
+#endif
 
 int spi_nand_write_page(uint32_t page,
 		   	   	   	    struct spi_nand_buffer_op *ops,
@@ -613,7 +617,7 @@ int spi_nand_write_page(uint32_t page,
 
 	ret = spi_nand_cmd_program_execute(page);
 
-	ret = spi_nand_wait_not_busy("writing", &status);
+	ret = spi_nand_wait_not_busy(NULL /*"writing"*/, &status);
 
 	if (statusptr)
 		*statusptr = status;
@@ -630,7 +634,7 @@ int spi_nand_erase_block(uint32_t block, uint8_t *statusptr)
 	ret = spi_unlock_all_blocks();
 	ret = spi_nand_cmd_erase_block(block);
 
-	ret = spi_nand_wait_not_busy("erasing", &status);
+	ret = spi_nand_wait_not_busy(NULL /* "erasing" */, &status);
 
 	if (statusptr)
 		*statusptr = status;
@@ -820,12 +824,12 @@ void page_read_write_test(void)
 	op.nbytes = sizeof(buffer);
 	memset(buffer, 0xA5, sizeof(buffer));
 
-
+#if 0
 	ret = spi_nand_read_page_1(page, &op, 1, &status);
 	printf("read page forced 1 returned %d, status %02x\n",
 			ret, status);
 	print_buffer(buffer, sizeof(buffer));
-
+#endif
 }
 
 #if 1

@@ -30,6 +30,9 @@
 #include <stdio.h>
 #include "cdc_print_sink.h"
 #include "spi_nand.h"
+#include "yaffsfs.h"
+void yaffs_sizes(void);
+void yaffs_test(void);
 
 /* USER CODE END Includes */
 
@@ -150,6 +153,8 @@ int main(void)
 
   printf("\n\nStarting " __DATE__ " " __TIME__"\n");
 
+  //yaffs_sizes();
+  //yaffs_test();
   spi_nand_test();
 
   /* USER CODE END 2 */
