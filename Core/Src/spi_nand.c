@@ -283,7 +283,7 @@ static int spi_nand_transaction(const struct nand_command_def *cmd,
 	qspi_complete = 0;
 
 	if (data_size > 0) {
-		if (1 || data_size < 10) {
+		if (data_size < 10) {
 			if (cmd->data_is_tx) {
 				ret = HAL_QSPI_Transmit(&hqspi, data, 10);
 			} else {

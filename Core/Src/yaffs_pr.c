@@ -263,17 +263,23 @@ void create_a_file(const char *name, int size)
 {
 	int i;
 	int h;
+	int n = size;
+	int start = HAL_GetTick();
+	int n_writes = 0;
 
 	h = yaffs_open(name, O_CREAT | O_RDWR | O_TRUNC, 0666);
 
-	while (size > 0) {
-			i = size;
+	while (n > 0) {
+			i = n;
 			if (i > sizeof(local_buffer))
 				i = sizeof(local_buffer);
 			yaffs_write(h, local_buffer, i);
-			size -= i;
+			n -= i;
+			n_writes++;
 	}
 	yaffs_close(h);
+	printf("Writing file %s, handle %d, size %d took %d writes and %d milliseconds\n",
+			name, h, size, n_writes, HAL_GetTick() - start);
 }
 
 void read_a_file(const char *name)

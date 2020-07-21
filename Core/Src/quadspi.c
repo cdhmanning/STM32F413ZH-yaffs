@@ -33,7 +33,7 @@ void MX_QUADSPI_Init(void)
 
   hqspi.Instance = QUADSPI;
   hqspi.Init.ClockPrescaler = 3;
-  hqspi.Init.FifoThreshold = 1;
+  hqspi.Init.FifoThreshold = 4;
   hqspi.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_NONE;
   hqspi.Init.FlashSize = 31;
   hqspi.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_1_CYCLE;
@@ -111,14 +111,17 @@ void HAL_QSPI_MspInit(QSPI_HandleTypeDef* qspiHandle)
     /* QUADSPI Init */
     hdma_quadspi.Instance = DMA2_Stream7;
     hdma_quadspi.Init.Channel = DMA_CHANNEL_3;
-    hdma_quadspi.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_quadspi.Init.Direction = DMA_MEMORY_TO_PERIPH;
     hdma_quadspi.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_quadspi.Init.MemInc = DMA_MINC_DISABLE;
+    hdma_quadspi.Init.MemInc = DMA_MINC_ENABLE;
     hdma_quadspi.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
     hdma_quadspi.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
     hdma_quadspi.Init.Mode = DMA_NORMAL;
-    hdma_quadspi.Init.Priority = DMA_PRIORITY_VERY_HIGH;
-    hdma_quadspi.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    hdma_quadspi.Init.Priority = DMA_PRIORITY_MEDIUM;
+    hdma_quadspi.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+    hdma_quadspi.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL;
+    hdma_quadspi.Init.MemBurst = DMA_MBURST_SINGLE;
+    hdma_quadspi.Init.PeriphBurst = DMA_PBURST_SINGLE;
     if (HAL_DMA_Init(&hdma_quadspi) != HAL_OK)
     {
       Error_Handler();
