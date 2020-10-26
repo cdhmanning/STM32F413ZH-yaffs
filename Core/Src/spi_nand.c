@@ -283,7 +283,7 @@ static int spi_nand_transaction(const struct nand_command_def *cmd,
 	qspi_complete = 0;
 
 	if (data_size > 0) {
-		if (data_size < 10) {
+		if (data_size <= 32) {
 			if (cmd->data_is_tx) {
 				ret = HAL_QSPI_Transmit(&hqspi, data, 10);
 			} else {
@@ -898,6 +898,33 @@ void spi_nand_test(void)
 #endif
 
 }
+
+void spi_nand_format(void)
+{
+	uint8_t status;
+	uint8_t config;
+	uint8_t block_lock;
+	int ret;
+	int i;
+
+	printf("\n\nspi_nand_test\n\n");
+
+	HAL_Delay(500);
+
+	printf("spi_nand_init()...\n");
+	ret = spi_nand_init();
+	printf("spi_nand_init()... returned %d\n", ret);
+
+	printf("spi nand erasing blocks\n");
+
+	for(i = 0; i < 1024; i++) {
+		ret = spi_nand_erase_block(i, &status);
+		printf("erase block %5d, returned %d, status %02x\n", i, ret, status);
+	}
+
+	check_bad_blocks_test();
+}
+
 
 #endif
 

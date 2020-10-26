@@ -1,3 +1,4 @@
+#include "yaffs_spi_nand.h"
 #include "yaffs_guts.h"
 #include "yaffsfs.h"
 #include "spi_nand.h"
@@ -246,7 +247,60 @@ int yaffs_spi_nand_load_driver(const char *name,
 	return YAFFS_OK;
 }
 
+static void dump_directory_tree_worker(const char *dname,int recursive)
+{
+	yaffs_DIR *d;
+	struct yaffs_dirent *de;
+	struct yaffs_stat s;
+	char str[100];
 
+	d = yaffs_opendir(dname);
+
+	if(!d)
+	{
+		printf("opendir failed\n");
+	}
+	else
+	{
+		while((de = yaffs_readdir(d)) != NULL)
+		{
+			sprintf(str,"%s/%s",dname,de->d_name);
+
+			yaffs_lstat(str,&s);
+
+			printf("%s inode %d length %d mode %X ",
+				str, s.st_ino, (int)s.st_size, s.st_mode);
+			switch(s.st_mode & S_IFMT)
+			{
+				case S_IFREG: printf("data file"); break;
+				case S_IFDIR: printf("directory"); break;
+				case S_IFLNK: printf("symlink -->");
+							  if(yaffs_readlink(str,str,100) < 0)
+								printf("no alias");
+							  else
+								printf("\"%s\"",str);
+							  break;
+				default: printf("unknown"); break;
+			}
+
+			printf("\n");
+
+			if((s.st_mode & S_IFMT) == S_IFDIR && recursive)
+				dump_directory_tree_worker(str,1);
+
+		}
+
+		yaffs_closedir(d);
+	}
+
+}
+
+static void dump_directory_tree(const char *dname)
+{
+	dump_directory_tree_worker(dname,1);
+	printf("\n");
+	printf("Free space in %s is %d\n\n",dname,(int)yaffs_freespace(dname));
+}
 
 static uint8_t local_buffer[1000];
 
@@ -286,7 +340,6 @@ void read_a_file(const char *name)
 {
 	int h;
 	int size;
-	int ret;
 	int start = HAL_GetTick();
 	int n_reads = 0;
 
@@ -301,6 +354,87 @@ void read_a_file(const char *name)
 			name, h, size, n_reads, HAL_GetTick() - start);
 	yaffs_close(h);
 }
+
+
+void create_a_pattern_file(const char *name, int size)
+{
+	int i;
+	int h;
+	int n = size;
+	int start = HAL_GetTick();
+	int n_writes = 0;
+	uint8_t ch;
+	char *x;
+
+	ch = 0;
+	x = (char *)name;
+
+	while(*x) {
+		ch += *x;
+		x++;
+	}
+
+	h = yaffs_open(name, O_CREAT | O_RDWR | O_TRUNC, 0666);
+
+
+	while (n > 0) {
+			for(i = 0; i < sizeof(local_buffer); i++) {
+				local_buffer[i] = ch;
+				ch++;
+			}
+			i = n;
+			if (i > sizeof(local_buffer))
+				i = sizeof(local_buffer);
+			yaffs_write(h, local_buffer, i);
+			n -= i;
+			n_writes++;
+	}
+	yaffs_close(h);
+	printf("Writing file %s, handle %d, size %d took %d writes and %d milliseconds\n",
+			name, h, size, n_writes, HAL_GetTick() - start);
+}
+
+void check_a_pattern_file(const char *name)
+{
+	int h;
+	int i;
+	int size;
+	int start = HAL_GetTick();
+	int n_reads = 0;
+	int read_diff = 0;
+	uint8_t ch;
+	char *x;
+
+	ch = 0;
+	x = (char *)name;
+
+	while(*x) {
+		ch += *x;
+		x++;
+	}
+
+	h = yaffs_open(name, O_RDONLY, 0);
+	size = yaffs_lseek(h, 0, SEEK_END);
+	yaffs_lseek(h, 0, SEEK_SET);
+
+	while(!read_diff && yaffs_read(h, local_buffer, sizeof(local_buffer)) > 0) {
+		for(i = 0; !read_diff && i < sizeof(local_buffer); i++) {
+			if (local_buffer[i] != ch) {
+				printf("file %s differs at %d: %02x %02x\n",
+						name, n_reads * sizeof(local_buffer) + i,
+						local_buffer[i], ch);
+				return;
+			}
+			ch++;
+		}
+		n_reads++;
+	}
+
+	printf("Reading file %s, handle %d, size %d took %d reads and %d milliseconds\n",
+			name, h, size, n_reads, HAL_GetTick() - start);
+	yaffs_close(h);
+}
+
 
 void yaffs_call_all_funcs(void)
 {
@@ -319,38 +453,41 @@ void yaffs_call_all_funcs(void)
 	ret = yaffs_mount("/m");
 	printf("Mounting /m returned %d, took %d msec\n", ret, HAL_GetTick() - start);
 
+	dump_directory_tree("/m");
+
 	fill_local_buffer();
 	printf("Start writing 10 Mbytes\n");
 	start = HAL_GetTick();
-	create_a_file("/m/0", 1000000);
-	create_a_file("/m/1", 1000000);
-	create_a_file("/m/2", 1000000);
-	create_a_file("/m/3", 1000000);
-	create_a_file("/m/4", 1000000);
-	create_a_file("/m/5", 1000000);
-	create_a_file("/m/6", 1000000);
-	create_a_file("/m/7", 1000000);
-	create_a_file("/m/8", 1000000);
-	create_a_file("/m/9", 1000000);
+	create_a_pattern_file("/m/0", 1000000);
+	create_a_pattern_file("/m/1", 1000000);
+	create_a_pattern_file("/m/2", 1000000);
+	create_a_pattern_file("/m/3", 1000000);
+	create_a_pattern_file("/m/4", 1000000);
+	create_a_pattern_file("/m/5", 1000000);
+	create_a_pattern_file("/m/6", 1000000);
+	create_a_pattern_file("/m/7", 1000000);
+	create_a_pattern_file("/m/8", 1000000);
+	create_a_pattern_file("/m/9", 1000000);
 	printf("End writing 10 Mbytes, took %d milliseconds\n",
 			HAL_GetTick() - start);
 
 	printf("Start reading 10 Mbytes\n");
 	start = HAL_GetTick();
-	read_a_file("/m/0");
-	read_a_file("/m/1");
-	read_a_file("/m/2");
-	read_a_file("/m/3");
-	read_a_file("/m/4");
-	read_a_file("/m/5");
-	read_a_file("/m/6");
-	read_a_file("/m/7");
-	read_a_file("/m/8");
-	read_a_file("/m/9");
+	check_a_pattern_file("/m/0");
+	check_a_pattern_file("/m/1");
+	check_a_pattern_file("/m/2");
+	check_a_pattern_file("/m/3");
+	check_a_pattern_file("/m/4");
+	check_a_pattern_file("/m/5");
+	check_a_pattern_file("/m/6");
+	check_a_pattern_file("/m/7");
+	check_a_pattern_file("/m/8");
+	check_a_pattern_file("/m/9");
+
 	printf("End reading 10 Mbytes, took %d milliseconds\n",
 			HAL_GetTick() - start);
 
-	h = yaffs_open("/m/a", O_RDWR, 0);
+	h = yaffs_open("/m/0", O_RDWR, 0);
 
 	if(h >= 0) {
 		l = yaffs_lseek(h, 0, SEEK_END);

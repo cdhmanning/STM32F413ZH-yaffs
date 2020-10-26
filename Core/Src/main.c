@@ -154,8 +154,11 @@ int main(void)
   printf("\n\nStarting " __DATE__ " " __TIME__"\n");
 
   //yaffs_sizes();
-  yaffs_test();
+  //yaffs_test();
+  my_monitor();
+
   //spi_nand_test();
+  //spi_nand_format();
 
   /* USER CODE END 2 */
 
