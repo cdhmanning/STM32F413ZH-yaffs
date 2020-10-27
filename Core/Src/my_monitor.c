@@ -302,7 +302,7 @@ static int my_monitor_process(int argc, char *argv[])
 
 		cmd++;
 	}
-	printf("Command not found\n");
+	printf("Command '%s' not found\n", argv[0]);
 	return -1;
 }
 
