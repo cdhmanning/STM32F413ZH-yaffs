@@ -12,9 +12,12 @@
 #include "yaffs_spi_nand.h"
 #include "yaffs_guts.h"
 #include "test_rig.h"
+#include "logger.h"
 
 #include <stdio.h>
 #include <string.h>
+
+int command_run(char *input_cmd);
 
 static int dump_directory_tree_worker(const char *dname,int recursive)
 {
@@ -27,7 +30,7 @@ static int dump_directory_tree_worker(const char *dname,int recursive)
 
 	if(!d)
 	{
-		printf("opendir failed\n");
+		logger_print("opendir failed\n");
 		return -1;
 	}
 	else
@@ -38,22 +41,23 @@ static int dump_directory_tree_worker(const char *dname,int recursive)
 
 			yaffs_lstat(str,&s);
 
-			printf("%s inode %d length %d mode %X ",
+			logger_print("%s inode %d length %d mode %X ",
 				str, s.st_ino, (int)s.st_size, s.st_mode);
 			switch(s.st_mode & S_IFMT)
 			{
-				case S_IFREG: printf("data file"); break;
-				case S_IFDIR: printf("directory"); break;
-				case S_IFLNK: printf("symlink -->");
-							  if(yaffs_readlink(str,str,100) < 0)
-								printf("no alias");
-							  else
-								printf("\"%s\"",str);
+				case S_IFREG: logger_print("data file"); break;
+				case S_IFDIR: logger_print("directory"); break;
+				case S_IFLNK: logger_print("symlink -->");
+							  if (yaffs_readlink(str,str,100) < 0) {
+								logger_print("no alias");
+							  } else {
+								logger_print("\"%s\"",str);
+							  }
 							  break;
-				default: printf("unknown"); break;
+				default: logger_print("unknown"); break;
 			}
 
-			printf("\n");
+			logger_print("\n");
 
 			if((s.st_mode & S_IFMT) == S_IFDIR && recursive)
 				dump_directory_tree_worker(str,1);
@@ -72,8 +76,8 @@ static int dump_directory_tree(const char *dname)
 
 	ret = dump_directory_tree_worker(dname,1);
 	if (!ret) {
-		printf("\n");
-		printf("Free space in %s is %d\n\n",dname,(int)yaffs_freespace(dname));
+		logger_print("\n");
+		logger_print("Free space in %s is %d\n\n",dname,(int)yaffs_freespace(dname));
 	}
 
 	return ret;
@@ -81,6 +85,8 @@ static int dump_directory_tree(const char *dname)
 
 static int recursive_rm_worker(const char *dname,int recursive)
 {
+	logger_increase_indent_level(1);
+
 	yaffs_DIR *d;
 	struct yaffs_dirent *de;
 	struct yaffs_stat s;
@@ -90,7 +96,9 @@ static int recursive_rm_worker(const char *dname,int recursive)
 
 	if(!d)
 	{
-		printf("opendir failed\n");
+		logger_print("opendir failed\n");
+		logger_increase_indent_level(-1);
+
 		return -1;
 	}
 	else
@@ -101,22 +109,23 @@ static int recursive_rm_worker(const char *dname,int recursive)
 
 			yaffs_lstat(str,&s);
 
-			printf("%s inode %d length %d mode %X ",
+			logger_print("%s inode %d length %d mode %X ",
 				str, s.st_ino, (int)s.st_size, s.st_mode);
 			switch(s.st_mode & S_IFMT)
 			{
-				case S_IFREG: printf("data file"); break;
-				case S_IFDIR: printf("directory"); break;
-				case S_IFLNK: printf("symlink -->");
-							  if(yaffs_readlink(str,str,100) < 0)
-								printf("no alias");
-							  else
-								printf("\"%s\"",str);
+				case S_IFREG: logger_print("data file"); break;
+				case S_IFDIR: logger_print("directory"); break;
+				case S_IFLNK: logger_print("symlink -->");
+							  if(yaffs_readlink(str,str,100) < 0) {
+								logger_print("no alias");
+							  } else {
+								logger_print("\"%s\"",str);
+							  }
 							  break;
-				default: printf("unknown"); break;
+				default: logger_print("unknown"); break;
 			}
 
-			printf("\n");
+			logger_print("\n");
 
 			if((s.st_mode & S_IFMT) == S_IFDIR && recursive) {
 				recursive_rm_worker(str,1);
@@ -128,14 +137,13 @@ static int recursive_rm_worker(const char *dname,int recursive)
 
 		yaffs_closedir(d);
 	}
-
+	logger_increase_indent_level(-1);
 	return 0;
 }
 
 static int recursive_rm(const char *dname)
 {
 	int ret;
-
 	ret = recursive_rm_worker(dname,1);
 	return ret;
 }
@@ -154,19 +162,26 @@ static int cmd_mntcreate(int argc, char *argv[])
 	int start_block;
 	int end_block;
 
+	logger_increase_indent_level(1);
+
+
 	if (argc < 4){
-		printf("mntcreate needs more arguments\n");
+		logger_print("mntcreate needs more arguments\n");
+		logger_increase_indent_level(-1);
+
 		return -1;
 	}
 
 	start_block = atoi(argv[2]);
 	end_block = atoi(argv[3]);
 
-	printf("Creating mount point %s start %d end %d\n",
+	logger_print("Creating mount point %s start %d end %d\n",
 				argv[1], start_block, end_block);
 
 	if (end_block - start_block < 5) {
-		printf("That looks too small\n");
+		logger_print("That looks too small\n");
+		logger_increase_indent_level(-1);
+
 		return -1;
 	}
 	ret = yaffs_spi_nand_load_driver(argv[1], start_block, end_block);
@@ -176,21 +191,27 @@ static int cmd_mntcreate(int argc, char *argv[])
 	else
 		ret = -1;
 
-	printf("Creating mount point %s returned %d\n", argv[1], ret);
+	logger_print("Creating mount point %s returned %d\n", argv[1], ret);
 
+	logger_increase_indent_level(-1);
 	return ret;
 }
 
 static int cmd_mount(int argc, char *argv[])
 {
 	int ret;
+	logger_increase_indent_level(1);
 
-	if (argc < 2)
+	if (argc < 2) {
+		logger_increase_indent_level(-1);
+
 		return -1;
+	}
 
 	ret = yaffs_mount(argv[1]);
 
-	printf("Mounting %s returned %d\n", argv[1], ret);
+	logger_print("Mounting %s returned %d\n", argv[1], ret);
+	logger_increase_indent_level(-1);
 
 	return ret;
 }
@@ -198,13 +219,18 @@ static int cmd_mount(int argc, char *argv[])
 static int cmd_mkdir(int argc, char *argv[])
 {
 	int ret;
+	logger_increase_indent_level(1);
 
-	if (argc < 2)
+	if (argc < 2) {
+		logger_increase_indent_level(-1);
+
 		return -1;
+	}
 
 	ret = yaffs_mkdir(argv[1], 0666);
 
-	printf("yaffs_mkdir %s returned %d\n", argv[1], ret);
+	logger_print("yaffs_mkdir %s returned %d\n", argv[1], ret);
+	logger_increase_indent_level(-1);
 
 	return ret;
 }
@@ -215,19 +241,31 @@ static int cmd_rm(int argc, char *argv[])
 	int recursive = 0;
 	char *name;
 	struct yaffs_stat s;
+	logger_increase_indent_level(1);
 
-	if (argc < 2)
+	if (argc < 2){
+		logger_print("rm needs more arguments.\n");
+		logger_increase_indent_level(-1);
+
 		return -1;
-
+	}
+	logger_print("rm running\n");
 	recursive = (0 == strcmp(argv[1], "-r"));
 
-	if (recursive && argv < 3)
+	if (recursive && argc < 3) {
+		logger_print("rm needs more arguments.\n");
+		logger_increase_indent_level(-1);
+
 		return -1;
+	}
 
 	if (recursive) {
 		name = argv[2];
 		ret = recursive_rm(argv[2]);
-		printf("recursive rm %s returned %d\n", name, ret);
+		logger_print("recursive rm %s returned %d\n", name, ret);
+		logger_increase_indent_level(-1);
+
+		return ret;
 	}
 
 	name = argv[1];
@@ -237,39 +275,49 @@ static int cmd_rm(int argc, char *argv[])
 		ret = yaffs_rmdir(name);
 	else
 		ret = yaffs_unlink(name);
-	printf("rm %s returned %d\n", name, ret);
+	logger_print("rm %s returned %d\n", name, ret);
+	logger_increase_indent_level(-1);
 
 	return ret;
 }
 
 static int cmd_setup_env(int argc, char *argv[]) {
-
+	logger_increase_indent_level(1);
 	int ret =-1;
 
-	printf("running setup test environment\n");
+	logger_print("running setup test environment\n");
 
 	ret = command_run("mntcreate testmount 0 200");
 	ret =  ret && command_run("mount testmount");
 
+	logger_increase_indent_level(-1);
 	return ret;
 
 }
 
 static int cmd_test_all(int argc, char *argv[]){
-	printf("running cmd_test_all\n");
-	return test_rig_run_all();
+	logger_increase_indent_level(1);
+
+	logger_print("running cmd_test_all\n");
+	int ret = test_rig_run_all();
+	logger_increase_indent_level(-1);
+	return ret;
 }
 
 static int cmd_umount(int argc, char *argv[])
 {
 	int ret;
+	logger_increase_indent_level(-1);
 
-	if (argc < 2)
+	if (argc < 2) {
+		logger_increase_indent_level(-1);
+
 		return -1;
-
+	}
 	ret = yaffs_unmount(argv[1]);
 
-	printf("Unmounting %s returned %d\n", argv[1], ret);
+	logger_print("Unmounting %s returned %d\n", argv[1], ret);
+	logger_increase_indent_level(-1);
 
 	return ret;
 }
@@ -303,7 +351,7 @@ static int cmd_help(int argc, char *argv[])
 	struct cmd_def *cmd = cmd_list;
 
 	while(cmd->name) {
-		printf("%s\n", cmd->help_str);
+		logger_print("%s\n", cmd->help_str);
 		cmd++;
 	}
 
@@ -326,14 +374,14 @@ static int my_monitor_process(int argc, char *argv[])
 			ret =  cmd->fn(argc, argv);
 			end_time = HAL_GetTick();
 
-			printf("%u msec\n", end_time - start_time);
+			logger_print("%u msec\n", end_time - start_time);
 
 			return ret;
 		}
 
 		cmd++;
 	}
-	printf("Command '%s' not found\n", argv[0]);
+	logger_print("Command '%s' not found\n", argv[0]);
 	return -1;
 }
 
@@ -376,7 +424,7 @@ int command_run(char *input_cmd) {
 	}
 
 	ret = my_monitor_process(argc, argv);
-	printf("returned %d\n", ret);
+	logger_print("returned %d\n", ret);
 
 	free(cmd);
 	return ret;
