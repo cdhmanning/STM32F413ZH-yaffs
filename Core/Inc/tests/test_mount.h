@@ -10,15 +10,6 @@
 
 #include "test.h"
 
-
-int test_mount_setup(void);
-
-int test_mount_run(void);
-
-int test_mount_teardown(void);
-
-
 Test test_mount;
-
 
 #endif
