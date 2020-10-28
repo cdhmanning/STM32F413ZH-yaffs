@@ -11,9 +11,11 @@
 #include "tests/lists_of_all_tests.h"
 #include "tests/test_mount.h"
 
-Test *test_list[] ={
+Test *tests[]={
 		&test_mount,
 		0//Terminator
 };
+
+Test **test_list = tests;
 
 #endif /* SRC_TESTS_LIST_OF_ALL_TESTS_C_ */

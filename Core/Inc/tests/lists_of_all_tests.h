@@ -10,6 +10,6 @@
 
 #include "test.h"
 
-Test *test_list[];
+Test **test_list;
 
 #endif /* INC_TESTS_LISTS_OF_ALL_TESTS_H_ */
