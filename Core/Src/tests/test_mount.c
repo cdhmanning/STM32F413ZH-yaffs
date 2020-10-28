@@ -1,6 +1,3 @@
-#ifndef __TEST_RIG_H__
-#define __TEST_RIG_H__
-
 #include "test.h"
 #include "stdio.h"
 #include <stddef.h>
@@ -31,4 +28,3 @@ int test_mount_teardown(void) {
 Test test_mount = {"test_mount", test_mount_setup, test_mount_run, test_mount_teardown};
 
 
-#endif
