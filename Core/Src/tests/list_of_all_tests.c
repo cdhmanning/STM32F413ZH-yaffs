@@ -9,10 +9,13 @@
 #define SRC_TESTS_LIST_OF_ALL_TESTS_C_
 
 #include "tests/lists_of_all_tests.h"
+
+#include "tests/test_rm.h"
 #include "tests/test_mount.h"
 
 Test *tests[]={
 		&test_mount,
+		&test_rm,
 		0//Terminator
 };
 

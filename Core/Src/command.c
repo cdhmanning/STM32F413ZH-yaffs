@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 int command_run(char *input_cmd);
 
@@ -242,6 +243,7 @@ static int cmd_rm(int argc, char *argv[])
 	char *name;
 	struct yaffs_stat s;
 	logger_increase_indent_level(1);
+	logger_print("running cmd_rm\n");
 
 	if (argc < 2){
 		logger_print("rm needs more arguments.\n");
@@ -260,6 +262,7 @@ static int cmd_rm(int argc, char *argv[])
 	}
 
 	if (recursive) {
+		logger_print("running recursive rm\n");
 		name = argv[2];
 		ret = recursive_rm(argv[2]);
 		logger_print("recursive rm %s returned %d\n", name, ret);
@@ -269,9 +272,12 @@ static int cmd_rm(int argc, char *argv[])
 	}
 
 	name = argv[1];
+	logger_print("about to run yaffs_stat\n");
 	ret = yaffs_stat(name, &s);
 
-	if (s.st_mode & S_IFMT == S_IFDIR)
+	logger_print("yaffs_stat returned %d\n", ret);
+
+	if ((s.st_mode & S_IFMT) == S_IFDIR)
 		ret = yaffs_rmdir(name);
 	else
 		ret = yaffs_unlink(name);
