@@ -10,6 +10,7 @@ int test_rig_run_all(void){
 	logger_increase_indent_level(1);
 	while (current != 0) {
 		int ret = 0;
+		logger_print("\n");
 		logger_print("running test %s\n", current->name);
 		logger_increase_indent_level(1);
 
