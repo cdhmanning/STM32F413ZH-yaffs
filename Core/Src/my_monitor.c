@@ -145,8 +145,10 @@ static int cmd_mntcreate(int argc, char *argv[])
 	int start_block;
 	int end_block;
 
-	if (argc < 4)
+	if (argc < 4){
+		printf("mntcreate needs more arguments\n");
 		return -1;
+	}
 
 	start_block = atoi(argv[2]);
 	end_block = atoi(argv[3]);
@@ -231,6 +233,20 @@ static int cmd_rm(int argc, char *argv[])
 	return ret;
 }
 
+static int cmd_setup_env(int argc, char *argv[]) {
+
+	int ret =-1;
+
+	printf("running setup test environment\n");
+
+	ret = run_command("mntcreate testmount 0 200");
+	ret =  ret && run_command("mount testmount");
+
+	return ret;
+
+}
+
+
 static int cmd_umount(int argc, char *argv[])
 {
 	int ret;
@@ -264,6 +280,7 @@ struct cmd_def cmd_list[] = {
 	CMD_DEF("dir", cmd_dir, 			"dir name\t\tDump directory tree for specified directory"),
 	CMD_DEF("mkdir", cmd_mkdir, 		"mkdir name\t\tCreate specified directory"),
 	CMD_DEF("rm", cmd_rm, 				"rm [-r] name\t\tDelete obj [-r] for recursive"),
+	CMD_DEF("setup-env", cmd_setup_env, "setup-env\t\tCreates a test mountpoint with files and dirs and mounts it."),
 	{}
 };
 
@@ -302,7 +319,7 @@ static int my_monitor_process(int argc, char *argv[])
 
 		cmd++;
 	}
-	printf("Command not found\n");
+	printf("Command '%s' not found\n", argv[0]);
 	return -1;
 }
 
@@ -344,40 +361,63 @@ static char *accept_input(void)
 	return str;
 }
 
-void my_monitor(void)
-{
-	char *input;
+int run_command(char *input_cmd) {
+
 	char *argv[10];
 	int argc;
 	int ret;
+	argc = 0;
+	memset(argv, 0, sizeof(argv));
+
+	//copy the string because we are modifying it.
+	//there were issues with this being used with string literals, which cannot be modified.
+	int string_length = strlen(input_cmd);
+	char *cmd = (char *) malloc(sizeof(char)*(string_length+1));
+	strcpy(cmd, input_cmd);
+
+	char *cmd_iter = cmd;
+
+	//parse the string into args
+	while(*cmd_iter && argc < 10) {
+
+		//replace all whitespaces and tabs with null until we hit not tab or null char.
+		//this partitions the string into several substrings
+		while (*cmd_iter == ' ' || *cmd_iter == '\t') {
+			*cmd_iter = 0;
+			cmd_iter++;
+		}
+		//if the char is not null.
+		if (*cmd_iter) {
+			//just copy the entire string?
+			argv[argc] = cmd_iter;
+			argc++;
+		}
+		//move pointer to next whitespace, tab, or null.
+		while (*cmd_iter && !(*cmd_iter == ' ' || *cmd_iter == '\t')) {
+			cmd_iter++;
+		}
+	}
+
+	ret = my_monitor_process(argc, argv);
+	printf("returned %d\n", ret);
+
+	free(cmd);
+	return ret;
+}
+
+void my_monitor(void)
+{
+	char *input;
+
 
 	printf("Yaffs test monitor\n");
+
+	run_command("setup-env");
 
 	while(1) {
 		print_prompt();
 		input = accept_input();
 		//printf("Got input \"%s\"\n", input);
-		argc = 0;
-		memset(argv, 0, sizeof(argv));
-
-		while(*input && argc < 10) {
-			while (*input == ' ' || *input == '\t') {
-				*input = 0;
-				input++;
-			}
-			if (*input) {
-				argv[argc] = input;
-				argc++;
-			}
-			while (*input && !(*input == ' ' || *input == '\t')) {
-				input++;
-			}
-		}
-
-		//for(i = 0; i < argc; i++)
-		//	printf("\"%s\"\n", argv[i]);
-
-		ret = my_monitor_process(argc, argv);
-		printf("returned %d\n", ret);
+		run_command(input);
 	}
 }
