@@ -9,7 +9,6 @@ int test_mount_setup(void) {
 };
 
 int test_mount_run(void) {
-	ASSERT_EQ_INT(1,1, "does the test rig work?");
 
 	int ret = command_run("mount testmount 0 200");
 	ASSERT_EQ_INT(ret, -1, "error: mounted a non-existing mountpoint");
