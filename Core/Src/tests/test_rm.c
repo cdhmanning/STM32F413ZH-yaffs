@@ -18,10 +18,8 @@ int test_rm_run(void) {
 	logger_increase_indent_level(1);
 	logger_print("entering test_rm_run function\n");
 	int ret = command_run("rm /test/non_existent_file");
-	ASSERT_EQ_INT(ret, 1, "error: removed a non-existing file");
-//
-//	ret = command_run("mount testframeworkmountpoint 0 200");
-//	ASSERT_EQ_INT(ret, 0, "error: could not mount an existing mountpoint");
+	ASSERT_EQ_INT(ret, -1, "error: removed a non-existing file");
+
 	logger_increase_indent_level(-1);
 	return 0;
 };

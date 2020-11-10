@@ -2,14 +2,22 @@
 #include "tests/lists_of_all_tests.h"
 #include <stdio.h>
 #include "logger.h"
+#include "shared.h"
+#include "command.h"
 
 int test_rig_run_all(void){
 
-	Test *current = test_list[0];
+	Test *current = 0;
+	int index = 0;
+
+	command_run(MOUNTPOINT_CREATE_COMMAND);
+
 	logger_print("running test_rig_run_all\n");
 	logger_increase_indent_level(1);
-	while (current != 0) {
+	while (test_list[index] != 0) {
+		current = test_list[index];
 		int ret = 0;
+
 		logger_print("\n");
 		logger_print("running test %s\n", current->name);
 		logger_increase_indent_level(1);
@@ -44,7 +52,7 @@ int test_rig_run_all(void){
 		}
 
 		logger_print("curr before\n");
-		current++;
+		index++;
 		logger_print("curr after\n");
 		logger_increase_indent_level(-1);
 

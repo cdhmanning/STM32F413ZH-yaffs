@@ -13,6 +13,7 @@
 #include "yaffs_guts.h"
 #include "test_rig.h"
 #include "logger.h"
+#include "shared.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -204,6 +205,7 @@ static int cmd_mount(int argc, char *argv[])
 	logger_increase_indent_level(1);
 
 	if (argc < 2) {
+		logger_print("Mount needs more args\n");
 		logger_increase_indent_level(-1);
 
 		return -1;
@@ -293,8 +295,8 @@ static int cmd_setup_env(int argc, char *argv[]) {
 
 	logger_print("running setup test environment\n");
 
-	ret = command_run("mntcreate testmount 0 200");
-	ret =  ret && command_run("mount testmount");
+	ret = command_run(MOUNTPOINT_CREATE_COMMAND);
+	ret =  ret && command_run("mount "MOUNTPOINT_PATH);
 
 	logger_increase_indent_level(-1);
 	return ret;
