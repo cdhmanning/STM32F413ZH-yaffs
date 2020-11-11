@@ -382,7 +382,7 @@ static int my_monitor_process(int argc, char *argv[])
 			ret =  cmd->fn(argc, argv);
 			end_time = HAL_GetTick();
 
-			logger_print("%u msec\n", end_time - start_time);
+			logger_print("command %s ran and returned %d in %u msec\n", cmd-> name, ret, end_time - start_time);
 
 			return ret;
 		}
@@ -432,7 +432,6 @@ int command_run(char *input_cmd) {
 	}
 
 	ret = my_monitor_process(argc, argv);
-	logger_print("returned %d\n", ret);
 
 	free(cmd);
 	return ret;
