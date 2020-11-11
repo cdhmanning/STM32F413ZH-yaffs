@@ -330,6 +330,28 @@ static int cmd_umount(int argc, char *argv[])
 	return ret;
 }
 
+static int cmd_open(int argc, char *argv[]) {
+
+	logger_increase_indent_level(1);
+
+	if (argc < 2) {
+		logger_print("Open needs more arguments.\n");
+		logger_increase_indent_level(-1);
+		return -1;
+	}
+	int mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+	int fileHandle = yaffs_open(argv[1], O_RDWR| O_CREAT, mode) ;
+
+	logger_print("Open %s returned the file handle %d\n", argv[1], fileHandle);
+	logger_increase_indent_level(-1);
+
+	int ret =-1;
+	if (fileHandle >=0) {
+		ret = 1;
+	}
+	return ret;
+}
+
 struct cmd_def {
 	char *name;
 	int (*fn)(int argc, char *argv[]);
@@ -351,6 +373,7 @@ struct cmd_def cmd_list[] = {
 	CMD_DEF("rm", cmd_rm, 				"rm [-r] name\t\tDelete obj [-r] for recursive"),
 	CMD_DEF("setup-env", cmd_setup_env, "setup-env\t\tCreates a test mountpoint with files and dirs and mounts it."),
 	CMD_DEF("test-all", cmd_test_all, "test-all\t\tRuns all test scripts."),
+	CMD_DEF("open", cmd_open, "open path [oflag] [mode]\t\t runs yaffs_open, defaults are mode = (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH) and oflag =( O_RDWR| O_CREAT) "),
 	{}
 };
 

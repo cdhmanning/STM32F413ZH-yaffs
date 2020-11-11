@@ -12,10 +12,12 @@
 
 #include "tests/test_rm.h"
 #include "tests/test_mount.h"
+#include "tests/test_open.h"
 
 Test *tests[]={
 		&test_mount,
 		&test_rm,
+		&test_open,
 		0//Terminator
 };
 
