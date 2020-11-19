@@ -24,6 +24,10 @@ int test_open_run(void) {
 	ret = command_run("open " MOUNTPOINT_PATH"/new_file");
 	ASSERT_EQ_INT(ret, 1, "error: could not open a new file");
 
+	//reopen existing file
+	ret = command_run("open " MOUNTPOINT_PATH"/new_file");
+	ASSERT_EQ_INT(ret, 1, "error: could not open an existing file");
+
 	return 0;
 };
 

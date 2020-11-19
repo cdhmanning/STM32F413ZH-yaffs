@@ -13,11 +13,13 @@
 #include "tests/test_rm.h"
 #include "tests/test_mount.h"
 #include "tests/test_open.h"
+#include "tests/test_vertify.h"
 
 Test *tests[]={
 		&test_mount,
 		&test_rm,
 		&test_open,
+		&test_vertify,
 		0//Terminator
 };
 

@@ -72,6 +72,122 @@ static int dump_directory_tree_worker(const char *dname,int recursive)
 	return 0;
 }
 
+static void generate_pattern(char * path, int length, char *outputString) {
+	//stat the file.
+	//combine the inode and the path to create a seed for the random generator
+	//write n chars to the output string.
+	//The output string needs to already be malloced.
+
+	//set string to nulls first
+
+	//for now copy a dummy pattern.
+	for (int i = 0; i < length; i ++) {
+		outputString[i] = i % 255;
+	}
+
+}
+
+#define FILE_LENGTH 10
+//size needs to be 1mb.
+//have to partially read the data in chunks due to limited stack memory on the stm32
+
+static int vertify_existing_file( char *path) {
+	//create the actual file.
+
+	int mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+	int fileHandle = yaffs_open(path, O_RDWR, mode) ;
+
+	if (fileHandle == -1){
+		logger_print("\n");
+		logger_print("vertify_existing_file could not open file %s\n", path);
+		return -1;
+	}
+	logger_print("opened file %s\n", path);
+	char pattern_string[FILE_LENGTH];
+	char read_pattern[FILE_LENGTH];
+
+	//set memory to 0;
+	generate_pattern(path, FILE_LENGTH, pattern_string);
+	//copy pattern to file.
+	int ret = yaffs_read(fileHandle, read_pattern, FILE_LENGTH);
+	logger_print("read %d chars\n",ret);
+	yaffs_close(fileHandle);
+
+	if (!ret) {
+		logger_print("\n");
+		logger_print("vertify_existing_file could not read pattern from %s\n",path);
+		return -1;
+	}
+
+	//memcmp
+	ret = strncmp(pattern_string, read_pattern, FILE_LENGTH);
+	if (!ret) {
+		logger_print("\n");
+		logger_print("vertify_existing_file: read pattern is different than expected pattern for file %s\n",path);
+		logger_print("pattern read from file is:\n\t");
+		for (int i=0; i< FILE_LENGTH; i++){
+			logger_print("%d ",read_pattern[i]);
+		}
+		logger_print("\n");
+		logger_print("expected pattern is:\n\t");
+		for (int i=0; i< FILE_LENGTH; i++){
+			logger_print("%d ",pattern_string[i]);
+		}
+		logger_print("\n");
+
+
+		return -1;
+	}
+	return 0;
+
+}
+
+static int create_vertify_file( char *path) {
+	//create the actual file.
+
+	int mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+	int fileHandle = yaffs_open(path, O_RDWR| O_CREAT | O_TRUNC, mode) ;
+
+	if (fileHandle == -1){
+		logger_print("\n");
+		logger_print("create_vertify_file could not open file %s\n", path);
+		return -1;
+	}
+
+	logger_print("opened file %s\n", path);
+
+	char pattern_string[FILE_LENGTH];
+	//set memory to 0;
+	generate_pattern(path, FILE_LENGTH, pattern_string);
+	//copy pattern to file.
+	int ret = yaffs_write(fileHandle, pattern_string, FILE_LENGTH);
+
+	char read_string[FILE_LENGTH];
+	//quickly read it
+	yaffs_lseek(fileHandle, 0, SEEK_SET); //reset the cursor to the start of the file.
+	yaffs_read(fileHandle, read_string, FILE_LENGTH);
+	logger_print("pattern written to file is:\n\t");
+	for (int i=0; i< FILE_LENGTH; i++){
+		logger_print("%d ",pattern_string[i]);
+	}
+	logger_print("\n");
+	logger_print("pattern read from file is:\n\t");
+	for (int i=0; i< FILE_LENGTH; i++){
+		logger_print("%d ",read_string[i]);
+	}
+	logger_print("\n");
+
+	yaffs_close(fileHandle);
+
+	if (!ret) {
+		logger_print("\n");
+		logger_print("create_vertify_file could not write pattern to %s\n",path);
+		return -1;
+	}
+	return 0;
+
+}
+
 static int dump_directory_tree(const char *dname)
 {
 	int ret;
@@ -330,6 +446,42 @@ static int cmd_umount(int argc, char *argv[])
 	return ret;
 }
 
+static int cmd_verify_file(int argc, char *argv[])
+{
+	int ret;
+	logger_increase_indent_level(-1);
+
+	if (argc < 2) {
+		logger_increase_indent_level(-1);
+		logger_print("Verify-file needs more arguments\n");
+		return -1;
+	}
+	ret = vertify_existing_file(argv[1]);
+
+	logger_print("Verify-file %s returned %d\n", argv[1], ret);
+	logger_increase_indent_level(-1);
+
+	return ret;
+}
+
+static int cmd_create_verify_file(int argc, char *argv[])
+{
+	int ret;
+	logger_increase_indent_level(-1);
+
+	if (argc < 2) {
+		logger_increase_indent_level(-1);
+		logger_print("create-verify-file needs more arguments\n");
+		return -1;
+	}
+	ret = create_vertify_file(argv[1]);
+
+	logger_print("create-verify-file %s returned %d\n", argv[1], ret);
+	logger_increase_indent_level(-1);
+
+	return ret;
+}
+
 static int cmd_open(int argc, char *argv[]) {
 
 	logger_increase_indent_level(1);
@@ -374,6 +526,9 @@ struct cmd_def cmd_list[] = {
 	CMD_DEF("setup-env", cmd_setup_env, "setup-env\t\tCreates a test mountpoint with files and dirs and mounts it."),
 	CMD_DEF("test-all", cmd_test_all, "test-all\t\tRuns all test scripts."),
 	CMD_DEF("open", cmd_open, "open path [oflag] [mode]\t\t runs yaffs_open, defaults are mode = (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH) and oflag =( O_RDWR| O_CREAT) "),
+	CMD_DEF("verify-file", cmd_verify_file, "verify-file name\t\tverify an existing file."),
+	CMD_DEF("create-verify-file", cmd_create_verify_file, "cmd_create-verify_file name\t\tcreates a file with a known pattern that can be verified with verify-file command."),
+
 	{}
 };
 
