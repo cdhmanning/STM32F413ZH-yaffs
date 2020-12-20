@@ -63,7 +63,6 @@ u32 yaffsfs_CurrentTime(void)
 
 u32 yaffs_trace_mask= 0;
 
-static struct yaffs_dev this_dev;
 
 
 static int yaffs_spi_nand_write_chunk (struct yaffs_dev *dev, int nand_chunk,
@@ -198,7 +197,7 @@ int yaffs_spi_nand_load_driver(const char *name,
 							   uint32_t start_block,
 							   uint32_t end_block)
 {
-	struct yaffs_dev *dev = &this_dev;
+	struct yaffs_dev *dev;
 	char *name_copy = strdup(name);
 	struct yaffs_param *param;
 	struct yaffs_driver *drv;
@@ -208,6 +207,8 @@ int yaffs_spi_nand_load_driver(const char *name,
 		free(name_copy);
 		return YAFFS_FAIL;
 	}
+
+	dev = malloc(sizeof(*dev));
 
 	param = &dev->param;
 	drv = &dev->drv;

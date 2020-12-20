@@ -139,14 +139,14 @@ static int cmd_dir(int argc, char *argv[])
 	return dump_directory_tree(argv[1]);
 }
 
-static int cmd_mntcreate(int argc, char *argv[])
+static int cmd_devcreate(int argc, char *argv[])
 {
 	int ret;
 	int start_block;
 	int end_block;
 
 	if (argc < 4){
-		printf("mntcreate needs more arguments\n");
+		printf("devcreate needs more arguments\n");
 		return -1;
 	}
 
@@ -212,7 +212,7 @@ static int cmd_rm(int argc, char *argv[])
 
 	recursive = (0 == strcmp(argv[1], "-r"));
 
-	if (recursive && argv < 3)
+	if (recursive && argc < 3)
 		return -1;
 
 	if (recursive) {
@@ -224,7 +224,7 @@ static int cmd_rm(int argc, char *argv[])
 	name = argv[1];
 	ret = yaffs_stat(name, &s);
 
-	if (s.st_mode & S_IFMT == S_IFDIR)
+	if ((s.st_mode & S_IFMT) == S_IFDIR)
 		ret = yaffs_rmdir(name);
 	else
 		ret = yaffs_unlink(name);
@@ -239,8 +239,9 @@ static int cmd_setup_env(int argc, char *argv[]) {
 
 	printf("running setup test environment\n");
 
-	ret = run_command("mntcreate testmount 0 200");
-	ret =  ret && run_command("mount testmount");
+	ret = run_command("devcreate testmount 0 200");
+	if (ret == 0)
+		ret = run_command("mount testmount");
 
 	return ret;
 
@@ -274,7 +275,7 @@ static int cmd_help(int argc, char *argv[]);
 struct cmd_def cmd_list[] = {
 
 	CMD_DEF("help", cmd_help, 			"help\t\tGet help for commands"),
-	CMD_DEF("mntcreate", cmd_mntcreate, "mntcreate name start_block end_block\tCreate mount point for name, start block end block"),
+	CMD_DEF("devcreate", cmd_devcreate, "devcreate name start_block end_block\tCreate device for name, start block end block"),
 	CMD_DEF("mount", cmd_mount, 		"mount name\t\tMount specified yaffs device"),
 	CMD_DEF("umount", cmd_umount, 		"umount name\t\tUnmount specified yaffs device"),
 	CMD_DEF("dir", cmd_dir, 			"dir name\t\tDump directory tree for specified directory"),
@@ -312,7 +313,7 @@ static int my_monitor_process(int argc, char *argv[])
 			ret =  cmd->fn(argc, argv);
 			end_time = HAL_GetTick();
 
-			printf("%u msec\n", end_time - start_time);
+			printf("%lu msec\n", end_time - start_time);
 
 			return ret;
 		}
@@ -361,7 +362,8 @@ static char *accept_input(void)
 	return str;
 }
 
-int run_command(char *input_cmd) {
+int run_command(char *input_cmd)
+{
 
 	char *argv[10];
 	int argc;
