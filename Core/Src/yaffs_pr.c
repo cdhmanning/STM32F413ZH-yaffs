@@ -63,6 +63,7 @@ u32 yaffsfs_CurrentTime(void)
 
 u32 yaffs_trace_mask= 0;
 
+static struct yaffs_dev this_dev = {};
 
 
 static int yaffs_spi_nand_write_chunk (struct yaffs_dev *dev, int nand_chunk,
@@ -202,6 +203,15 @@ int yaffs_spi_nand_load_driver(const char *name,
 	struct yaffs_param *param;
 	struct yaffs_driver *drv;
 
+	if (dev->param.name != 0){
+		//hack: we have already added a device.
+		//adding multiple devices is not currently supported.
+		printf("warning: yaffs_spi_nand_load_driver has already loaded a device.\n"
+				"loading multiple devices is not yet supported\n"
+				"yaffs_spi_nand_load_driver is doing nothing and returning 1 (i.e. YAFFS_OK).\n");
+
+		return YAFFS_OK;
+	}
 
 	if(!name_copy) {
 		free(name_copy);
