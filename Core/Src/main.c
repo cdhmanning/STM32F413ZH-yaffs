@@ -29,6 +29,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "cdc_print_sink.h"
+#include "my_monitor.h"
 #include "spi_nand.h"
 #include "yaffsfs.h"
 void yaffs_sizes(void);
@@ -148,17 +149,25 @@ int main(void)
   MX_QUADSPI_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
+
   /* Wait for USB CDC to get going properly. */
   HAL_Delay(2000);
 
   printf("\n\nStarting " __DATE__ " " __TIME__"\n");
 
-  //yaffs_sizes();
-  //yaffs_test();
-  my_monitor();
-
+  // Early test code
   //spi_nand_test();
   //spi_nand_format();
+  //yaffs_sizes();
+  //yaffs_test();
+
+  /* Run a simple command monitor that takes commands over the
+   * USB CDC port and executes them.
+   */
+  my_monitor();
+
+  /* Execution does not get here... */
+
 
   /* USER CODE END 2 */
 
@@ -166,10 +175,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_Delay(1000);
-	  n_loops++;
-	  // printf("n_loops %d\n", n_loops);
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

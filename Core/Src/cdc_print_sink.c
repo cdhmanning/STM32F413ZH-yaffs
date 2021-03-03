@@ -1,3 +1,6 @@
+/*
+ * This provides a USB CDC (serial over USB) interface for printf.
+ */
 #include "cdc_print_sink.h"
 #include "usbd_cdc_if.h"
 

@@ -63,9 +63,6 @@ u32 yaffsfs_CurrentTime(void)
 
 u32 yaffs_trace_mask= 0;
 
-static struct yaffs_dev this_dev = {};
-
-
 static int yaffs_spi_nand_write_chunk (struct yaffs_dev *dev, int nand_chunk,
 			   const u8 *data, int data_len,
 			   const u8 *oob, int oob_len)
@@ -203,7 +200,10 @@ int yaffs_spi_nand_load_driver(const char *name,
 	struct yaffs_param *param;
 	struct yaffs_driver *drv;
 
-	if (dev->param.name != 0){
+	dev = malloc(sizeof(*dev));
+	memset(dev, 0, sizeof(*dev));
+
+	if (dev->param.name){
 		//hack: we have already added a device.
 		//adding multiple devices is not currently supported.
 		printf("warning: yaffs_spi_nand_load_driver has already loaded a device.\n"
@@ -218,12 +218,8 @@ int yaffs_spi_nand_load_driver(const char *name,
 		return YAFFS_FAIL;
 	}
 
-	dev = malloc(sizeof(*dev));
-
 	param = &dev->param;
 	drv = &dev->drv;
-
-	memset(dev, 0, sizeof(*dev));
 
 	param->name = name_copy;
 
@@ -248,8 +244,6 @@ int yaffs_spi_nand_load_driver(const char *name,
 	drv->drv_check_bad_fn = yaffs_spi_nand_check_bad_block;
 	drv->drv_initialise_fn = yaffs_spi_nand_initialise;
 	drv->drv_deinitialise_fn = yaffs_spi_nand_deinitialise;
-
-
 
 	dev->driver_context = (void *) 1;	// Used to identify the device in fstat.
 

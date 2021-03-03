@@ -3,6 +3,8 @@
  *
  *  Created on: 28/10/2020
  *      Author: timothy
+ *
+ *  This file provides the commands for the Yaffs test monitor.
  */
 
 
@@ -18,8 +20,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-
-int command_run(char *input_cmd);
 
 static int dump_directory_tree_worker(const char *dname,int recursive)
 {
@@ -158,6 +158,145 @@ static int cmd_dir(int argc, char *argv[])
 	return dump_directory_tree(argv[1]);
 }
 
+
+/* Test files are written with a pattern:
+ * Each 4 bytes are written with:
+ * The xor of the name + size + the position in the file (in u32s).
+ * Note that the pattern is 4-byte aligned but the file might
+ * not be so the rest of the pattern may be incomplete.
+ */
+
+static const char *name_part(const char *full_name)
+{
+	const char *ret = full_name;
+
+	while(*full_name) {
+		if (*full_name == '/')
+			ret = full_name + 1;
+		full_name++;
+	}
+	return ret;
+}
+
+static uint32_t name_xor(const char *name)
+{
+	uint32_t xor = 0;
+
+	while (*name) {
+		xor ^= *name;
+		name++;
+	}
+	return xor;
+}
+
+static int test_file_create(const char *name, int size)
+{
+	int h;
+	const char *fname;
+	uint32_t pattern;
+	uint32_t i;
+	uint32_t wr_size;
+	int ret;
+
+	fname = name_part(name);
+	pattern = name_xor(fname) + size;
+	i = 0;
+
+	h = yaffs_open(name, O_CREAT | O_TRUNC | O_RDWR, 0666);
+
+	while (size > 0) {
+		wr_size = size;
+		if (wr_size > 4)
+			wr_size = 4;
+		ret = yaffs_write(h, &pattern, wr_size);
+
+		size -= wr_size;
+		i += 4;
+		pattern += i;
+	}
+
+	yaffs_close(h);
+
+	return ret;
+}
+
+static int test_file_check(const char *name)
+{
+	int h;
+	int size;
+	const char *fname;
+	uint32_t pattern;
+	uint8_t  buffer[4];
+	uint32_t i;
+	uint32_t rd_size;
+	int ret;
+
+	h = yaffs_open(name, O_RDONLY, 0);
+
+	size = yaffs_lseek(h, 0, SEEK_END);
+
+	yaffs_lseek(h, 0, SEEK_SET);
+
+	fname = name_part(name);
+	pattern = name_xor(fname) + size;
+
+	while (size > 0) {
+		rd_size = size;
+		if (rd_size > 4)
+			rd_size = 4;
+		ret = yaffs_read(h, buffer, rd_size);
+
+		if(memcmp(buffer, &pattern, rd_size) != 0) {
+			printf("bad pattern in file %s at offset %d\n", name, i);
+		}
+		size -= rd_size;
+		i += 4;
+		pattern += i;
+	}
+
+	yaffs_close(h);
+
+	return ret;
+}
+
+
+
+static int cmd_test_file_create(int argc, char *argv[])
+{
+	int size;
+
+	if (argc < 3)
+		return -1;
+
+	size = atoi(argv[2]);
+	if (size <= 0) {
+		printf("Size %d is too small\n", size);
+		return -1;
+	}
+	return test_file_create(argv[1], size);
+}
+
+static int test_file_dir_check(const char *name, int recursive)
+{
+	return test_file_check(name);
+}
+
+static int cmd_test_file_check(int argc, char *argv[])
+{
+	int recursive = 0;
+
+	if (argc < 2)
+		return -1;
+
+	if (argc > 2) {
+		recursive = (0 ==strcmp(argv[1], "-r"));
+		if (!recursive)
+			return -1;
+	}
+
+	return test_file_dir_check(recursive ? argv[2] : argv[1], recursive);
+}
+
 static int cmd_mntcreate(int argc, char *argv[])
 {
 	int ret;
@@ -186,6 +325,7 @@ static int cmd_mntcreate(int argc, char *argv[])
 
 		return -1;
 	}
+
 	ret = yaffs_spi_nand_load_driver(argv[1], start_block, end_block);
 
 	if (ret == YAFFS_OK)
@@ -247,12 +387,13 @@ static int cmd_rm(int argc, char *argv[])
 	logger_increase_indent_level(1);
 	logger_print("running cmd_rm\n");
 
-	if (argc < 2){
+	if (argc < 2) {
 		logger_print("rm needs more arguments.\n");
 		logger_increase_indent_level(-1);
 
 		return -1;
 	}
+
 	logger_print("rm running\n");
 	recursive = (0 == strcmp(argv[1], "-r"));
 
@@ -289,7 +430,8 @@ static int cmd_rm(int argc, char *argv[])
 	return ret;
 }
 
-static int cmd_setup_env(int argc, char *argv[]) {
+static int cmd_setup_env(int argc, char *argv[])
+{
 	logger_increase_indent_level(1);
 	int ret =-1;
 
@@ -299,8 +441,8 @@ static int cmd_setup_env(int argc, char *argv[]) {
 	ret =  ret && command_run("mount "MOUNTPOINT_PATH);
 
 	logger_increase_indent_level(-1);
-	return ret;
 
+	return ret;
 }
 
 static int cmd_test_all(int argc, char *argv[]){
@@ -309,6 +451,7 @@ static int cmd_test_all(int argc, char *argv[]){
 	logger_print("running cmd_test_all\n");
 	int ret = test_rig_run_all();
 	logger_increase_indent_level(-1);
+
 	return ret;
 }
 
@@ -330,6 +473,24 @@ static int cmd_umount(int argc, char *argv[])
 	return ret;
 }
 
+static int cmd_format(int argc, char *argv[])
+{
+	int ret;
+	logger_increase_indent_level(-1);
+
+	if (argc < 2) {
+		logger_increase_indent_level(-1);
+
+		return -1;
+	}
+	ret = yaffs_format(argv[1], 0, 0, 0);
+	logger_print("Formatting %s returned %d\n", argv[1], ret);
+	logger_increase_indent_level(-1);
+
+	return ret;
+}
+
+
 struct cmd_def {
 	char *name;
 	int (*fn)(int argc, char *argv[]);
@@ -342,15 +503,18 @@ static int cmd_help(int argc, char *argv[]);
 
 struct cmd_def cmd_list[] = {
 
-	CMD_DEF("help", cmd_help, 			"help\t\tGet help for commands"),
-	CMD_DEF("mntcreate", cmd_mntcreate, "mntcreate name start_block end_block\tCreate mount point for name, start block end block"),
-	CMD_DEF("mount", cmd_mount, 		"mount name\t\tMount specified yaffs device"),
-	CMD_DEF("umount", cmd_umount, 		"umount name\t\tUnmount specified yaffs device"),
-	CMD_DEF("dir", cmd_dir, 			"dir name\t\tDump directory tree for specified directory"),
-	CMD_DEF("mkdir", cmd_mkdir, 		"mkdir name\t\tCreate specified directory"),
-	CMD_DEF("rm", cmd_rm, 				"rm [-r] name\t\tDelete obj [-r] for recursive"),
-	CMD_DEF("setup-env", cmd_setup_env, "setup-env\t\tCreates a test mountpoint with files and dirs and mounts it."),
-	CMD_DEF("test-all", cmd_test_all, "test-all\t\tRuns all test scripts."),
+	CMD_DEF("help", cmd_help, 					"help\t\tGet help for commands"),
+	CMD_DEF("mntcreate", cmd_mntcreate, 		"mntcreate name start_block end_block\tCreate mount point for name, start block end block"),
+	CMD_DEF("format", cmd_format, 				"format name\t\t\tformats an unmounted  yaffs_device (just erases the space)"),
+	CMD_DEF("mount", cmd_mount, 				"mount name\t\tMount specified yaffs device"),
+	CMD_DEF("umount", cmd_umount, 				"umount name\t\tUnmount specified yaffs device"),
+	CMD_DEF("dir", cmd_dir, 					"dir name\t\tDump directory tree for specified directory"),
+	CMD_DEF("mkdir", cmd_mkdir, 				"mkdir name\t\tCreate specified directory"),
+	CMD_DEF("rm", cmd_rm, 						"rm [-r] name\t\tDelete obj [-r] for recursive"),
+	CMD_DEF("tfcreate", cmd_test_file_create, 	"tfcreate fname size\t\tCreate a test file of the specified size"),
+	CMD_DEF("tfcheck", cmd_test_file_check,		"tfcheck [-r] name \t\tCheck a test file or directory [-r] for recursive"),
+	CMD_DEF("setup-env", cmd_setup_env, 		"setup-env\t\tCreates a test mountpoint with files and dirs and mounts it."),
+	CMD_DEF("test-all", cmd_test_all, 			"test-all\t\tRuns all test scripts."),
 	{}
 };
 
@@ -405,7 +569,7 @@ int command_run(char *input_cmd) {
 	//copy the string because we are modifying it.
 	//there were issues with this being used with string literals, which cannot be modified.
 	int string_length = strlen(input_cmd);
-	char *cmd = (char *) malloc(sizeof(char)*(string_length+1));
+	char *cmd = (char *) malloc(string_length+1);
 	strcpy(cmd, input_cmd);
 
 	char *cmd_iter = cmd;

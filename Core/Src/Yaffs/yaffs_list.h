@@ -62,7 +62,6 @@ static inline void list_add(struct list_head *new_entry,
 	new_entry->prev = list;
 	new_entry->next = list_next;
 	list_next->prev = new_entry;
-
 }
 
 static inline void list_add_tail(struct list_head *new_entry,

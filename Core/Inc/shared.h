@@ -8,8 +8,8 @@
 #ifndef INC_SHARED_H_
 #define INC_SHARED_H_
 
-#define MOUNTPOINT_PATH "testmountpoint"
-#define MOUNTPOINT_CREATE_COMMAND "mntcreate testmountpoint 0 200"
+#define MOUNTPOINT_PATH "testm"
+#define MOUNTPOINT_CREATE_COMMAND "mntcreate " MOUNTPOINT_PATH " 0 200"
 
 
 #endif /* INC_SHARED_H_ */
