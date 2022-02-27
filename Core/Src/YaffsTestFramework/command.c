@@ -220,6 +220,11 @@ static int test_file_create(const char *name, int size)
 	return ret;
 }
 
+static void report_range(uint32_t is_ok, uint32_t start, uint32_t end)
+{
+	if (start != end)
+		printf("%s from %lu to %lu\n", is_ok ? "Good" : "Bad", start, end - 4);
+}
 static int test_file_check(const char *name)
 {
 	int h;
@@ -229,6 +234,8 @@ static int test_file_check(const char *name)
 	uint8_t  buffer[4];
 	uint32_t i;
 	uint32_t rd_size;
+	uint32_t start_range;
+	uint32_t is_ok;
 	int ret;
 
 	h = yaffs_open(name, O_RDONLY, 0);
@@ -240,19 +247,38 @@ static int test_file_check(const char *name)
 	fname = name_part(name);
 	pattern = name_xor(fname) + size;
 
+	/*
+	 * Assume it is ok and starts at 0
+	 */
+	is_ok;
+	start_range = 0;
+	i=0;
+
 	while (size > 0) {
 		rd_size = size;
 		if (rd_size > 4)
 			rd_size = 4;
 		ret = yaffs_read(h, buffer, rd_size);
 
-		if(memcmp(buffer, &pattern, rd_size) != 0) {
-			printf("bad pattern in file %s at offset %d\n", name, i);
+		if (is_ok) {
+			if(memcmp(buffer, &pattern, rd_size) != 0) {
+				report_range(is_ok, start_range, i);
+				is_ok = 0;
+				start_range = i;
+			}
+		} else {
+			if(memcmp(buffer, &pattern, rd_size) == 0) {
+				report_range(is_ok, start_range, i);
+				is_ok = 1;
+				start_range = i;
+			}
 		}
 		size -= rd_size;
 		i += 4;
 		pattern += i;
 	}
+
+	report_range(is_ok, start_range, i);
 
 	yaffs_close(h);
 

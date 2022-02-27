@@ -1,3 +1,5 @@
+#include "my_malloc.h"
+#include <stdint.h>
 #include <stdlib.h>
 
 /* This malloc does the following:
@@ -61,4 +63,34 @@ void free(void *ptr)
 {
 
 }
+#else
+
+struct malloc_struct {
+	uint32_t total_allocated;
+	uint32_t total_freed;
+	uint32_t currently_allocated;
+} malloc_stats;
+
+void *my_malloc(size_t size_arg)
+{
+	void *ret;
+
+	ret = malloc(size_arg);
+
+	uint32_t *uptr = (uint32_t *)(((uint32_t) ret) - 8);
+	uint32_t malloc_size = uptr[1] - 8;
+
+	malloc_stats.total_allocated += size_arg;
+	malloc_stats.currently_allocated += size_arg;
+	return ret;
+}
+
+void my_free (void *ptr)
+{
+	uint32_t *uptr = (uint32_t *)((uint32_t) ptr - 8);
+	uint32_t malloc_size = uptr[1] -8;
+
+	free(ptr);
+}
+
 #endif

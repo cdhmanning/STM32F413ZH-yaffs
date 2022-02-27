@@ -1,3 +1,7 @@
+/*
+ * Functions for controlling a Micron QSPI NAND on an STM32 QSPI controller.
+ *
+ */
 #include "spi_nand.h"
 #include "gpio.h"
 #include <stdlib.h>
